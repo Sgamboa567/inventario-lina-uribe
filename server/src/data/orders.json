@@ -1,0 +1,22 @@
+{
+  "orders": [
+    {
+        "id": 1,
+        "productId": 101,
+        "quantity": 2,
+        "totalPrice": 39.98,
+        "date": "2023-10-01",
+        "customerName": "Jane Doe",
+        "status": "completed"
+    },
+    {
+        "id": 2,
+        "productId": 102,
+        "quantity": 1,
+        "totalPrice": 19.99,
+        "date": "2023-10-02",
+        "customerName": "John Smith",
+        "status": "pending"
+    }
+  ]
+}

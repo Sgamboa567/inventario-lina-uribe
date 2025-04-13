@@ -1,0 +1,26 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "name": "Crema Facial",
+      "description": "Crema hidratante para todo tipo de piel",
+      "category": "Cuidado Facial",
+      "price": 45000,
+      "stock": 5,
+      "alertThreshold": 3,
+      "images": ["crema1.jpg"],
+      "usageType": "venta"
+    },
+    {
+      "id": "2",
+      "name": "Set de Maquillaje Profesional",
+      "description": "Kit completo de maquillaje",
+      "category": "Maquillaje",
+      "price": 120000,
+      "stock": 2,
+      "alertThreshold": 2,
+      "images": ["kit1.jpg"],
+      "usageType": "sesión 1-a-1"
+    }
+  ]
+}
