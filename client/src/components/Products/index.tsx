@@ -46,7 +46,16 @@ const Products: React.FC = () => {
       toast.warning('El umbral de alerta es mayor que el stock actual');
     }
 
+    console.log('Submitting product:', newProduct);
+
     try {
+      console.log('Validated product data:', {
+        ...newProduct,
+        price: Number(newProduct.price),
+        stock: Number(newProduct.stock),
+        alertThreshold: Number(newProduct.alertThreshold)
+      });
+
       if (selectedProduct) {
         // Actualizar producto existente
         await updateProduct(selectedProduct.id, newProduct);
@@ -69,7 +78,7 @@ const Products: React.FC = () => {
         usageType: 'venta'
       });
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Detailed error:', err);
       toast.error(selectedProduct ? 'Error al actualizar producto' : 'Error al agregar producto');
     }
   };
