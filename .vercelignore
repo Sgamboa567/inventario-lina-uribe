@@ -1,0 +1,6 @@
+_archive
+.git
+**/node_modules
+**/dist
+README.md
+.env*

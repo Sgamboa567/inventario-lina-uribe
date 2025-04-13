@@ -1,58 +1,67 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Order, NewOrder } from '../types';
-import { CONFIG } from '../config';
+import { useState, useEffect } from 'react'
+import { toast } from 'react-toastify'
+import { supabase } from '../lib/supabase'
+import type { Order, OrderProduct } from '../types'
 
 export const useOrders = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get(`${CONFIG.API_URL}/api/orders`);
-      setOrders(response.data.orders || []);
-      setLoading(false);
+      setLoading(true)
+      const { data, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_products (
+            id,
+            product_id,
+            quantity,
+            price,
+            products (
+              name
+            )
+          )
+        `)
+        .order('date', { ascending: false })
+
+      if (ordersError) throw ordersError
+
+      const formattedOrders: Order[] = data.map(order => ({
+        id: order.id,
+        consecutive: order.consecutive,
+        date: order.date,
+        customerName: order.customer_name,
+        total: order.total,
+        status: order.status,
+        type: order.type,
+        products: order.order_products.map(op => ({
+          name: op.products.name,
+          quantity: op.quantity,
+          price: op.price
+        }))
+      }))
+
+      setOrders(formattedOrders)
+      setError(null)
     } catch (err) {
-      setError('Error fetching orders');
-      setLoading(false);
+      console.error('Error fetching orders:', err)
+      setError('Error fetching orders')
+      toast.error('Error al cargar las órdenes')
+    } finally {
+      setLoading(false)
     }
-  };
-
-  const addOrder = async (orderData: Omit<Order, 'id' | 'consecutive'>) => {
-    try {
-      const response = await axios.post(`${CONFIG.API_URL}/api/orders`, orderData);
-      setOrders(prev => [...prev, response.data]);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const completeOrder = async (orderId: string) => {
-    const response = await axios.put(`${CONFIG.API_URL}/api/orders/${orderId}/complete`);
-    setOrders(prev => prev.map(order => 
-      order.id === orderId ? response.data : order
-    ));
-    return response.data;
-  };
-
-  const deleteOrder = async (orderId: string) => {
-    await axios.delete(`${CONFIG.API_URL}/api/orders/${orderId}`);
-    setOrders(prev => prev.filter(order => order.id !== orderId));
-  };
+  }
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    fetchOrders()
+  }, [])
 
   return {
     orders,
     loading,
-    error,
-    addOrder,
-    completeOrder,
-    deleteOrder,
-    refreshOrders: fetchOrders
-  };
-};
+    error
+  }
+}

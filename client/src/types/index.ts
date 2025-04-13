@@ -1,3 +1,9 @@
+import type { Database } from '../lib/database.types'
+
+export type DbProduct = Database['public']['Tables']['products']['Row']
+export type DbOrder = Database['public']['Tables']['orders']['Row']
+export type DbOrderProduct = Database['public']['Tables']['order_products']['Row']
+
 export type OrderType = 'order' | 'sale';
 export type OrderStatus = 'pending' | 'completed';
 
@@ -7,15 +13,9 @@ export interface OrderProduct {
   price: number;
 }
 
-export interface Order {
-  id: string;
-  consecutive: number;
-  date: string;
+export interface Order extends Omit<DbOrder, 'customer_name' | 'created_at'> {
   customerName: string;
   products: OrderProduct[];
-  total: number;
-  status: OrderStatus;
-  type: OrderType;
 }
 
 export interface NewOrder {
@@ -26,15 +26,8 @@ export interface NewOrder {
   type: OrderType;
 }
 
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  price: number;
-  stock: number;
+export interface Product extends Omit<DbProduct, 'alert_threshold' | 'usage_type' | 'created_at'> {
   alertThreshold: number;
-  images: string[];
   usageType: 'venta' | 'sesión 1-a-1' | 'empresarial';
 }
 
