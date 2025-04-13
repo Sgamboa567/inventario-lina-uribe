@@ -20,9 +20,11 @@ export interface Product {
 }
 
 export interface OrderProduct {
+  id?: string           // Optional for new products
   name: string
   quantity: number
   price: number
+  product_id?: string   // Required for database
 }
 
 export interface Order {
