@@ -4,6 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/inventario-lina-uribe/',
   server: {
     port: 5173,
     proxy: {

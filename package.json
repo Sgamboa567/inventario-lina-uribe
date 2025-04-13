@@ -2,6 +2,7 @@
   "name": "inventario-lina-uribe",
   "version": "1.0.0",
   "description": "Sistema de gestión de inventario para productos de maquillaje",
+  "homepage": "https://sgamboa567.github.io/inventario-lina-uribe",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Sgamboa567/inventario-lina-uribe.git"
@@ -13,11 +14,16 @@
     "dev": "concurrently \"npm run client\" \"npm run server\"",
     "install-all": "npm install && cd client && npm install && cd ../server && npm install",
     "build": "cd client && npm run build && cd ../server && npm run build",
-    "start": "cd server && npm start"
+    "start": "cd server && npm start",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d client/dist"
   },
-  "author": "Sebastian Gamboa",
+  "author": "Samuel Gamboa",
   "license": "ISC",
   "dependencies": {
     "concurrently": "^8.0.1"
+  },
+  "devDependencies": {
+    "gh-pages": "^5.0.0"
   }
 }
