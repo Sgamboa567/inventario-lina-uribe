@@ -253,11 +253,9 @@ const Products: React.FC = () => {
                     Descripción
                   </label>
                   <textarea
-                    value={newProduct.description}
-                    onChange={e => setNewProduct({...newProduct, description: e.target.value})}
+                    value={newProduct.description || ''}
+                    onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
                     className="w-full p-2 border border-gray-300 rounded-md"
-                    rows={3}
-                    required
                   />
                 </div>
 

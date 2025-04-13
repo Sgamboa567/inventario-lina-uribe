@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { supabase } from '../lib/supabase'
-import type { Database } from '../lib/database.types'
-
-type Product = Database['public']['Tables']['products']['Row']
+import { Product, DbProduct, mapDbProductToProduct, mapProductToDbProduct } from '../types'
 
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([])
@@ -13,35 +11,37 @@ export const useProducts = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      const { data, error: dbError } = await supabase
         .from('products')
         .select('*')
         .order('name')
 
-      if (error) throw error
+      if (dbError) throw dbError
 
-      setProducts(data || [])
+      setProducts((data || []).map(mapDbProductToProduct))
+      setError(null)
     } catch (err) {
       console.error('Error fetching products:', err)
-      setError('Error fetching products')
+      setError('Error loading products')
       toast.error('Error al cargar los productos')
     } finally {
       setLoading(false)
     }
   }
 
-  const addProduct = async (productData: Omit<Product, 'id' | 'created_at'>) => {
+  const addProduct = async (productData: Omit<Product, 'id'>) => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .insert([productData])
+        .insert([mapProductToDbProduct(productData)])
         .select()
         .single()
 
       if (error) throw error
 
-      setProducts(prev => [...prev, data])
-      return data
+      const newProduct = mapDbProductToProduct(data)
+      setProducts(prev => [...prev, newProduct])
+      return newProduct
     } catch (error) {
       console.error('Error adding product:', error)
       throw error
@@ -52,17 +52,16 @@ export const useProducts = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .update(updates)
+        .update(mapProductToDbProduct({ ...products.find(p => p.id === id)!, ...updates }))
         .eq('id', id)
         .select()
         .single()
 
       if (error) throw error
 
-      setProducts(prev => 
-        prev.map(product => product.id === id ? data : product)
-      )
-      return data
+      const updatedProduct = mapDbProductToProduct(data)
+      setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p))
+      return updatedProduct
     } catch (error) {
       console.error('Error updating product:', error)
       throw error

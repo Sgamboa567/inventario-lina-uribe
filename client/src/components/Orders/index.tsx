@@ -10,7 +10,6 @@ const Orders: React.FC = () => {
   const [orderType, setOrderType] = useState<OrderType>('order');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState<string | null>(null);
-  const [selectedProducts, setSelectedProducts] = useState<OrderProduct[]>([]);
   const [newOrder, setNewOrder] = useState<NewOrder>({
     customerName: '',
     products: [],
@@ -23,53 +22,18 @@ const Orders: React.FC = () => {
     const product = products.find(p => p.name === productName);
     if (!product) return;
 
-    const existingProduct = selectedProducts.find(p => p.name === productName);
-    if (existingProduct) {
-      toast.warning('El producto ya está en la lista');
-      return;
-    }
-
-    const newProduct: OrderProduct = {
-      name: product.name,
-      quantity,
-      price: product.price
-    };
-
-    setSelectedProducts(prev => [...prev, newProduct]);
-    updateOrderTotal([...selectedProducts, newProduct]);
-  };
-
-  const updateOrderTotal = (products: OrderProduct[]) => {
-    try {
-      if (!Array.isArray(products)) {
-        setNewOrder(prev => ({
-          ...prev,
-          products: [],
-          total: 0
-        }));
-        return;
-      }
-
-      const validatedProducts = products.map(p => ({
-        name: p.name,
-        quantity: Math.max(1, Math.floor(p.quantity)),
-        price: Math.max(0, p.price)
-      }));
-
-      const total = validatedProducts.reduce((sum, p) => 
-        sum + (p.price * p.quantity), 0);
-
-      setNewOrder(prev => ({
-        ...prev,
-        products: validatedProducts,
-        total,
-        type: orderType
-      }));
-
-    } catch (error) {
-      console.error('Error updating order total:', error);
-      toast.error('Error al actualizar el total');
-    }
+    setNewOrder((prev: NewOrder) => ({
+      ...prev,
+      products: [
+        ...prev.products,
+        {
+          name: product.name,
+          quantity,
+          price: product.price
+        }
+      ],
+      total: prev.total + (product.price * quantity)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,7 +60,6 @@ const Orders: React.FC = () => {
       toast.success(`${orderType === 'sale' ? 'Venta' : 'Orden'} creada exitosamente`);
       
       setShowAddModal(false);
-      setSelectedProducts([]);
       setNewOrder({
         customerName: '',
         products: [],
@@ -128,6 +91,14 @@ const Orders: React.FC = () => {
       console.error('Error deleting order:', error);
       toast.error('Error al eliminar la orden');
     }
+  };
+
+  const handleDetailsClick = (orderId: string) => {
+    setShowDetailsModal(orderId);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetailsModal(null);
   };
 
   return (
@@ -211,7 +182,7 @@ const Orders: React.FC = () => {
                   </div>
 
                   <div className="mt-2 space-y-2">
-                    {selectedProducts.map(product => (
+                    {newOrder.products.map(product => (
                       <div key={product.name} className="flex justify-between items-center p-2 bg-pink-50 rounded-md">
                         <span>{product.name}</span>
                         <div className="flex items-center space-x-2">
@@ -226,22 +197,28 @@ const Orders: React.FC = () => {
                                 toast.error(`Stock insuficiente. Stock actual: ${productData.stock}`);
                                 return;
                               }
-                              const updatedProducts = selectedProducts.map(p =>
+                              const updatedProducts = newOrder.products.map(p =>
                                 p.name === product.name
                                   ? { ...p, quantity: newQuantity }
                                   : p
                               );
-                              setSelectedProducts(updatedProducts);
-                              updateOrderTotal(updatedProducts);
+                              setNewOrder(prev => ({
+                                ...prev,
+                                products: updatedProducts,
+                                total: updatedProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0)
+                              }));
                             }}
                             className="w-20 p-1 border border-gray-300 rounded-md"
                           />
                           <button
                             type="button"
                             onClick={() => {
-                              const updatedProducts = selectedProducts.filter(p => p.name !== product.name);
-                              setSelectedProducts(updatedProducts);
-                              updateOrderTotal(updatedProducts);
+                              const updatedProducts = newOrder.products.filter(p => p.name !== product.name);
+                              setNewOrder(prev => ({
+                                ...prev,
+                                products: updatedProducts,
+                                total: updatedProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0)
+                              }));
                             }}
                             className="text-red-500 hover:text-red-700"
                           >
@@ -265,7 +242,6 @@ const Orders: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setShowAddModal(false);
-                      setSelectedProducts([]);
                       setNewOrder({
                         customerName: '',
                         products: [],
