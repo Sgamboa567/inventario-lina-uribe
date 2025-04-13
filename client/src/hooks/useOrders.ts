@@ -25,7 +25,10 @@ export const useOrders = () => {
         .select()
         .single()
 
-      if (orderError) throw orderError
+      if (orderError) {
+        console.error('Detailed order error:', orderError);
+        throw new Error(`Error creating order: ${orderError.message}`);
+      }
 
       // Then insert the order products
       const orderProducts = orderData.products.map(product => ({
@@ -65,8 +68,10 @@ export const useOrders = () => {
       await fetchOrders() // Refresh the orders list
       return orderRecord
     } catch (error: any) {
-      console.error('Error adding order:', error)
-      throw new Error(error.message || 'Error al crear la orden')
+      console.error('Detailed error:', error);
+      const message = error.message || error.details || 'Error al crear la orden';
+      toast.error(message);
+      throw new Error(message);
     }
   }
 
