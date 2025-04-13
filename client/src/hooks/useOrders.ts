@@ -16,24 +16,76 @@ export const useOrders = () => {
     type: orderData.type
   })
 
+  const checkStock = async (products: OrderProduct[]) => {
+    for (const product of products) {
+      const { data: productData } = await supabase
+        .from('products')
+        .select('stock')
+        .eq('name', product.name)
+        .single();
+
+      if (!productData) {
+        throw new Error(`Producto no encontrado: ${product.name}`);
+      }
+
+      if (productData.stock < product.quantity) {
+        throw new Error(`Stock insuficiente para ${product.name}. Disponible: ${productData.stock}`);
+      }
+    }
+  };
+
+  const updateStock = async (products: OrderProduct[]) => {
+    for (const product of products) {
+      // First get the product ID
+      const { data: productData } = await supabase
+        .from('products')
+        .select('id, stock')
+        .eq('name', product.name)
+        .single();
+
+      if (!productData) {
+        throw new Error(`Producto no encontrado: ${product.name}`);
+      }
+
+      // Then update the stock using our custom function
+      const { error: stockError } = await supabase
+        .rpc('update_product_stock', {
+          product_id: productData.id,
+          quantity: product.quantity
+        });
+
+      if (stockError) {
+        throw new Error(`Error actualizando stock de ${product.name}: ${stockError.message}`);
+      }
+    }
+  };
+
   const addOrder = async (orderData: Omit<Order, 'id' | 'consecutive'>) => {
     try {
-      // Insert the order first
+      // For sales, check stock before creating
+      if (orderData.type === 'sale') {
+        await checkStock(orderData.products);
+      }
+
+      // Insert the order
       const { data: orderRecord, error: orderError } = await supabase
         .from('orders')
-        .insert([transformOrderForDb(orderData)])
+        .insert([{
+          customer_name: orderData.customerName,
+          date: orderData.date,
+          total: orderData.total,
+          status: orderData.status,
+          type: orderData.type
+        }])
         .select()
         .single()
 
-      if (orderError) {
-        console.error('Detailed order error:', orderError);
-        throw new Error(`Error creating order: ${orderError.message}`);
-      }
+      if (orderError) throw orderError
 
-      // Then insert the order products
+      // Insert order products
       const orderProducts = orderData.products.map(product => ({
         order_id: orderRecord.id,
-        product_id: product.id, // Make sure your OrderProduct type includes this
+        product_name: product.name,
         quantity: product.quantity,
         price: product.price
       }))
@@ -44,52 +96,57 @@ export const useOrders = () => {
 
       if (productsError) throw productsError
 
-      // If it's a sale, update product stock
+      // If it's a sale, update stock immediately
       if (orderData.type === 'sale') {
-        for (const product of orderData.products) {
-          const { data: currentProduct } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('name', product.name)
-            .single()
-
-          if (currentProduct) {
-            const newStock = currentProduct.stock - product.quantity
-            const { error: stockError } = await supabase
-              .from('products')
-              .update({ stock: newStock })
-              .eq('name', product.name)
-
-            if (stockError) throw stockError
-          }
-        }
+        await updateStock(orderData.products)
       }
 
-      await fetchOrders() // Refresh the orders list
+      await fetchOrders()
       return orderRecord
     } catch (error: any) {
-      console.error('Detailed error:', error);
-      const message = error.message || error.details || 'Error al crear la orden';
-      toast.error(message);
-      throw new Error(message);
+      console.error('Detailed error:', error)
+      throw new Error(error.message || 'Error al crear la orden')
     }
   }
 
   const completeOrder = async (orderId: string) => {
     try {
-      const { data, error } = await supabase
+      // Get order details
+      const { data: order } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_products (
+            quantity,
+            product_name
+          )
+        `)
+        .eq('id', orderId)
+        .single()
+
+      if (!order) throw new Error('Orden no encontrada')
+
+      // Check stock before completing
+      const products = order.order_products.map((op: any) => ({
+        name: op.product_name,
+        quantity: op.quantity
+      }))
+
+      // Validate stock
+      await checkStock(products)
+
+      // Update stock
+      await updateStock(products)
+
+      // Update order status
+      const { error } = await supabase
         .from('orders')
         .update({ status: 'completed' })
         .eq('id', orderId)
-        .select()
-        .single()
 
       if (error) throw error
 
-      setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status: 'completed' } : order
-      ))
-      return data
+      await fetchOrders()
     } catch (error: any) {
       console.error('Error completing order:', error)
       throw new Error(error.message || 'Error al completar la orden')
@@ -133,11 +190,12 @@ export const useOrders = () => {
             quantity,
             price,
             products (
+              id,
               name
             )
           )
         `)
-        .order('date', { ascending: false }) // Changed from created_at to date
+        .order('date', { ascending: false })
 
       if (error) throw error
 
@@ -149,11 +207,13 @@ export const useOrders = () => {
         total: order.total,
         status: order.status,
         type: order.type,
-        products: order.order_products.map((op: any) => ({
-          name: op.products.name,
-          quantity: op.quantity,
-          price: op.price
-        }))
+        products: order.order_products
+          .filter((op: any) => op.products) // Filter out any null products
+          .map((op: any) => ({
+            name: op.products?.name || 'Producto no encontrado',
+            quantity: op.quantity,
+            price: op.price
+          }))
       }))
 
       setOrders(formattedOrders)

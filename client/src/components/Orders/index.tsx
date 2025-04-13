@@ -50,10 +50,14 @@ const Orders: React.FC = () => {
     }
 
     try {
-      const orderData = {
+      const orderData: Omit<Order, 'id' | 'consecutive'> = {
         ...newOrder,
         date: new Date().toISOString(),
-        status: orderType === 'sale' ? ('completed' as OrderStatus) : ('pending' as OrderStatus)
+        status: orderType === 'sale' ? ('completed' as const) : ('pending' as const),
+        type: orderType,
+        customerName: newOrder.customerName,
+        products: newOrder.products,
+        total: newOrder.total
       };
 
       await addOrder(orderData);
@@ -67,9 +71,9 @@ const Orders: React.FC = () => {
         status: 'pending',
         type: 'order'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating order:', error);
-      toast.error('Error al crear la orden');
+      toast.error(error.message || 'Error al crear la orden');
     }
   };
 
@@ -85,11 +89,15 @@ const Orders: React.FC = () => {
 
   const handleDeleteOrder = async (order: Order) => {
     try {
+      if (!window.confirm('¿Estás seguro de que deseas eliminar esta orden?')) {
+        return;
+      }
+
       await deleteOrder(order.id);
-      toast.success('Orden eliminada exitosamente');
-    } catch (error) {
+      toast.success(`${order.type === 'sale' ? 'Venta' : 'Orden'} eliminada exitosamente`);
+    } catch (error: any) {
       console.error('Error deleting order:', error);
-      toast.error('Error al eliminar la orden');
+      toast.error(error.message || 'Error al eliminar la orden');
     }
   };
 
