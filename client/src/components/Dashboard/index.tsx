@@ -159,6 +159,8 @@ const Dashboard: React.FC = () => {
                       { name: 'Stock Bajo', value: lowStockProducts.length - outOfStockProducts.length },
                       { name: 'Sin Stock', value: outOfStockProducts.length }
                     ]}
+                    dataKey="value"  // Add this line
+                    nameKey="name"   // Add this line
                     cx="50%"
                     cy="50%"
                     innerRadius={60}

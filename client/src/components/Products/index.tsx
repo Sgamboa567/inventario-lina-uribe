@@ -27,22 +27,22 @@ const Products: React.FC = () => {
       return;
     }
 
-    if (newProduct.price < 0) {
+    if ((newProduct.price ?? 0) < 0) {
       toast.error('El precio no puede ser negativo');
       return;
     }
     
-    if (newProduct.stock < 0) {
+    if ((newProduct.stock ?? 0) < 0) {
       toast.error('El stock no puede ser negativo');
       return;
     }
   
-    if (newProduct.alertThreshold < 0) {
+    if ((newProduct.alertThreshold ?? 0) < 0) {
       toast.error('El umbral de alerta no puede ser negativo');
       return;
     }
   
-    if (newProduct.alertThreshold > newProduct.stock) {
+    if ((newProduct.alertThreshold ?? 0) > (newProduct.stock ?? 0)) {
       toast.warning('El umbral de alerta es mayor que el stock actual');
     }
 

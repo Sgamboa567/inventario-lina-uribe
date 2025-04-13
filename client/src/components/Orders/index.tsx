@@ -1,117 +1,101 @@
 import React, { useState } from 'react';
-import { useProducts } from '../../hooks/useProducts';
 import { useOrders } from '../../hooks/useOrders';
-import type { Order, Product, OrderProduct } from '../../types';
+import { useProducts } from '../../hooks/useProducts';
+import { Order, OrderProduct, OrderType, OrderStatus, NewOrder } from '../../types';
 import { toast } from 'react-toastify';
 
 const Orders: React.FC = () => {
-  const { products } = useProducts();
   const { orders, addOrder, completeOrder, deleteOrder } = useOrders();
+  const { products } = useProducts();
+  const [orderType, setOrderType] = useState<OrderType>('order');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [orderType, setOrderType] = useState<'order' | 'sale'>('order');
   const [showDetailsModal, setShowDetailsModal] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<OrderProduct[]>([]);
-  const [newOrder, setNewOrder] = useState({
+  const [newOrder, setNewOrder] = useState<NewOrder>({
     customerName: '',
-    products: [] as OrderProduct[],
+    products: [],
     total: 0,
-    status: 'pending' as const,
-    type: 'order' as const
+    status: 'pending',
+    type: 'order'
   });
 
   const handleAddProduct = (productName: string, quantity: number) => {
     const product = products.find(p => p.name === productName);
     if (!product) return;
 
-    if (orderType === 'sale' && quantity > product.stock) {
-      toast.error(`Stock insuficiente. Stock actual: ${product.stock}. Por favor, cree una orden.`);
+    const existingProduct = selectedProducts.find(p => p.name === productName);
+    if (existingProduct) {
+      toast.warning('El producto ya está en la lista');
       return;
     }
 
-    const existingProduct = selectedProducts.find(p => p.name === productName);
-    if (existingProduct) {
-      const updatedProducts = selectedProducts.map(p => 
-        p.name === productName 
-          ? { ...p, quantity: p.quantity + quantity }
-          : p
-      );
-      setSelectedProducts(updatedProducts);
-      updateOrderTotal(updatedProducts);
-    } else {
-      const newProducts = [...selectedProducts, { 
-        name: productName, 
-        quantity, 
-        price: product.price 
-      }];
-      setSelectedProducts(newProducts);
-      updateOrderTotal(newProducts);
-    }
+    const newProduct: OrderProduct = {
+      name: product.name,
+      quantity,
+      price: product.price
+    };
+
+    setSelectedProducts(prev => [...prev, newProduct]);
+    updateOrderTotal([...selectedProducts, newProduct]);
   };
 
   const updateOrderTotal = (products: OrderProduct[]) => {
     try {
-      // Check if products array is valid
-      if (!Array.isArray(products) || products.length === 0) {
+      if (!Array.isArray(products)) {
         setNewOrder(prev => ({
           ...prev,
           products: [],
-          total: 0,
-          type: orderType
+          total: 0
         }));
         return;
       }
-  
-      // Validate and format each product
-      const validatedProducts = products.map(p => {
-        if (!p.name || typeof p.quantity !== 'number' || typeof p.price !== 'number') {
-          throw new Error(`Invalid product data: ${JSON.stringify(p)}`);
-        }
-        return {
-          name: p.name,
-          quantity: Math.max(1, Math.floor(p.quantity)),
-          price: Math.max(0, p.price)
-        };
-      });
-  
-      // Calculate total
+
+      const validatedProducts = products.map(p => ({
+        name: p.name,
+        quantity: Math.max(1, Math.floor(p.quantity)),
+        price: Math.max(0, p.price)
+      }));
+
       const total = validatedProducts.reduce((sum, p) => 
         sum + (p.price * p.quantity), 0);
-  
-      // Update order state
+
       setNewOrder(prev => ({
         ...prev,
         products: validatedProducts,
         total,
         type: orderType
       }));
-  
+
     } catch (error) {
       console.error('Error updating order total:', error);
-      toast.error('Error al actualizar el total de la orden');
+      toast.error('Error al actualizar el total');
     }
   };
 
-  const handleAddOrder = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!newOrder.customerName?.trim()) {
+      toast.error('El nombre del cliente es requerido');
+      return;
+    }
+
+    if (newOrder.products.length === 0) {
+      toast.error('Debe agregar al menos un producto');
+      return;
+    }
+
     try {
-      // Validación adicional
-      if (selectedProducts.length === 0) {
-        toast.error('Debe agregar al menos un producto');
-        return;
-      }
-  
       const orderData = {
         ...newOrder,
-        products: selectedProducts,
         date: new Date().toISOString(),
-        type: orderType,
-        status: orderType === 'sale' ? 'completed' : 'pending'
+        status: orderType === 'sale' ? ('completed' as OrderStatus) : ('pending' as OrderStatus)
       };
-  
+
       await addOrder(orderData);
       toast.success(`${orderType === 'sale' ? 'Venta' : 'Orden'} creada exitosamente`);
+      
       setShowAddModal(false);
-      // Reset form
       setSelectedProducts([]);
       setNewOrder({
         customerName: '',
@@ -137,14 +121,12 @@ const Orders: React.FC = () => {
   };
 
   const handleDeleteOrder = async (order: Order) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar esta ${order.type === 'sale' ? 'venta' : 'orden'}?`)) {
-      try {
-        await deleteOrder(order.id);
-        toast.success(`${order.type === 'sale' ? 'Venta' : 'Orden'} eliminada exitosamente`);
-      } catch (error) {
-        console.error('Error deleting order:', error);
-        toast.error(`Error al eliminar la ${order.type === 'sale' ? 'venta' : 'orden'}`);
-      }
+    try {
+      await deleteOrder(order.id);
+      toast.success('Orden eliminada exitosamente');
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Error al eliminar la orden');
     }
   };
 
@@ -185,7 +167,7 @@ const Orders: React.FC = () => {
                 {orderType === 'sale' ? 'Nueva Venta' : 'Nueva Orden'}
               </h2>
               
-              <form onSubmit={handleAddOrder} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Cliente
