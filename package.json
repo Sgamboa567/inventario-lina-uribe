@@ -1,6 +1,11 @@
 {
   "name": "inventario-lina-uribe",
   "version": "1.0.0",
+  "description": "Sistema de gestión de inventario para productos de maquillaje",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sgamboa567/inventario-lina-uribe.git"
+  },
   "private": true,
   "scripts": {
     "client": "cd client && npm run dev",
@@ -10,6 +15,8 @@
     "build": "cd client && npm run build && cd ../server && npm run build",
     "start": "cd server && npm start"
   },
+  "author": "Tu Nombre",
+  "license": "ISC",
   "dependencies": {
     "concurrently": "^8.0.1"
   },
