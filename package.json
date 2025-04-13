@@ -15,10 +15,9 @@
     "build": "cd client && npm run build && cd ../server && npm run build",
     "start": "cd server && npm start"
   },
-  "author": "Tu Nombre",
+  "author": "Sebastian Gamboa",
   "license": "ISC",
   "dependencies": {
     "concurrently": "^8.0.1"
-  },
-  "devDependencies": {}
+  }
 }
